@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Quiz de Diversidade Religiosa </title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+  <div class="w-full max-w-md bg-white rounded-xl shadow-lg p-6">
+    <h1 class="text-2xl font-bold text-center mb-4">Quiz de  Diversidade Religiosa</h1>
+    <div id="quiz-container">
+      <p id="question-text" class="text-lg font-medium mb-4">Carregando...</p>
+      <div id="answers" class="grid gap-3 mb-4"></div>
+      <button id="next-btn"
+              class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 rounded hidden">
+        Próxima
+      </button>
+      <p id="feedback" class="mt-3 text-center font-semibold"></p>
+    </div>
+    <div class="mt-6">
+      <div class="flex justify-between text-sm mb-1">
+        <span>Pontuação: <span id="score">0</span></span>
+        <span>Concluído: <span id="percent">0</span>%</span>
+      </div>
+      <div class="w-full bg-gray-200 rounded-full h-3">
+        <div id="progress-bar" class="bg-green-500 h-3 rounded-full" style="width: 0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Dados do quiz ---
+    const questions = [
+  {
+    "pergunta": "O que são religiões?",
+    "respostas": ["Jogos antigos", "Crenças em uma força maior com rituais", "Regras de trânsito", "Tipos de comida"],
+    "correta": "Crenças em uma força maior com rituais"
+  },
+  {
+    "pergunta": "Qual é a base das religiões?",
+    "respostas": ["Esportes e festas", "Dinheiro e poder", "Rituais e crença numa força maior", "Mentiras e invenções"],
+    "correta": "Rituais e crença numa força maior"
+  },
+  {
+    "pergunta": "Por que existem várias religiões no Brasil?",
+    "respostas": ["Porque o Brasil inventou todas", "Porque os povos trouxeram suas crenças", "Porque o governo obrigou", "Porque foram criadas por uma só pessoa"],
+    "correta": "Porque os povos trouxeram suas crenças"
+  },
+  {
+    "pergunta": "O que são orixás?",
+    "respostas": ["Super-heróis", "Brinquedos", "Deuses das religiões africanas", "Animais sagrados"],
+    "correta": "Deuses das religiões africanas"
+  },
+  {
+    "pergunta": "Quem trouxe o catolicismo para o Brasil?",
+    "respostas": ["Japoneses e chineses", "Árabes", "Portugueses e espanhóis", "Alemães"],
+    "correta": "Portugueses e espanhóis"
+  },
+  {
+    "pergunta": "O que significa o Brasil ser um Estado laico?",
+    "respostas": ["Tem uma religião oficial", "Não tem nenhuma religião oficial", "Todos devem ser católicos", "Religião é proibida"],
+    "correta": "Não tem nenhuma religião oficial"
+  },
+  {
+    "pergunta": "O que garante a liberdade religiosa no Brasil?",
+    "respostas": ["A televisão", "A Constituição Federal", "As escolas", "As igrejas"],
+    "correta": "A Constituição Federal"
+  },
+  {
+    "pergunta": "Desde quando existem religiões?",
+    "respostas": ["Desde os tempos modernos", "Desde a invenção da internet", "Há muito tempo na história da humanidade", "Desde que o Brasil foi descoberto"],
+    "correta": "Há muito tempo na história da humanidade"
+  },
+  {
+    "pergunta": "Qual é a importância da diversidade religiosa?",
+    "respostas": ["Deixar as pessoas brigarem", "Ter só uma religião no país", "Respeitar diferentes crenças e culturas", "Impedir que existam religiões"],
+    "correta": "Respeitar diferentes crenças e culturas"
+  },
+  {
+    "pergunta": "O que a Constituição permite sobre a religião?",
+    "respostas": ["Escolher qualquer religião ou nenhuma", "Obrigar todos a seguirem uma religião", "Ter só igrejas católicas", "Fechar templos religiosos"],
+    "correta": "Escolher qualquer religião ou nenhuma"
+  }
+]
+
+
+
+
+
+
+;
+
+    const total = questions.length;
+    let remaining = [...questions];
+    let score = 0;
+    let currentIdx = null;
+
+    // --- Elementos DOM ---
+    const qText     = document.getElementById('question-text');
+    const answers   = document.getElementById('answers');
+    const nextBtn   = document.getElementById('next-btn');
+    const feedback  = document.getElementById('feedback');
+    const scoreEl   = document.getElementById('score');
+    const pctEl     = document.getElementById('percent');
+    const bar       = document.getElementById('progress-bar');
+
+    // Atualiza placar e barra
+    function updateStatus() {
+      scoreEl.textContent = score;
+      const pct = Math.round((score / total) * 100);
+      pctEl.textContent = pct;
+      bar.style.width = pct + '%';
+    }
+
+    // Toca um bip com Web Audio API
+    function playSound(type) {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = type === 'correct' ? 440 : 220;
+      osc.connect(ctx.destination);
+      osc.start();
+      setTimeout(() => { osc.stop(); ctx.close(); },
+                 type === 'correct' ? 150 : 400);
+    }
+
+    // Escolhe e renderiza a próxima pergunta
+    function pickQuestion() {
+      feedback.textContent = '';
+      nextBtn.classList.add('hidden');
+      answers.innerHTML = '';
+
+      if (remaining.length === 0) {
+        qText.textContent = '🎉 Parabéns! Você concluiu todas as perguntas.';
+        return;
+      }
+
+      // sorteio aleatório
+      currentIdx = Math.floor(Math.random() * remaining.length);
+      const q = remaining[currentIdx];
+      qText.textContent = q.pergunta;
+
+      // monta botões de resposta
+      q.respostas.forEach(resp => {
+        const btn = document.createElement('button');
+        btn.className = 'w-full text-left px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded';
+        btn.textContent = resp;
+        btn.onclick = () => handleAnswer(resp);
+        answers.appendChild(btn);
+      });
+    }
+
+    // Lógica ao clicar numa resposta
+    function handleAnswer(selected) {
+      // desabilita todas as opções
+      Array.from(answers.children).forEach(b => b.disabled = true);
+
+      const q = remaining[currentIdx];
+      const correta = q.correta;
+
+      if (selected === correta) {
+        // ACERTOU
+        score++;
+        updateStatus();
+        playSound('correct');
+        feedback.className = 'mt-3 text-green-600 font-semibold';
+        feedback.textContent = '✅ Correto!';
+
+        // remove definitivamente
+        remaining.splice(currentIdx, 1);
+
+        // segue automaticamente em 2s
+        setTimeout(pickQuestion, 2000);
+
+      } else {
+        // ERROU
+        playSound('error');
+        feedback.className = 'mt-3 text-red-600 font-semibold';
+        feedback.textContent = `❌ Errado! A resposta certa é: "${correta}".`;
+
+        // mostra botão Próxima
+        nextBtn.textContent = 'Próxima';
+        nextBtn.classList.remove('hidden');
+        nextBtn.onclick = () => {
+          pickQuestion();
+        };
+      }
+    }
+
+    // Inicialização
+    updateStatus();
+    pickQuestion();
+  </script>
+</body>
+</html>

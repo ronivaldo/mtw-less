@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Quiz de  julgamento de Hunefer </title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+  <div class="w-full max-w-md bg-white rounded-xl shadow-lg p-6">
+    <h1 class="text-2xl font-bold text-center mb-4">Quiz de  julgamento de Hunefer </h1>
+    <div id="quiz-container">
+      <p id="question-text" class="text-lg font-medium mb-4">Carregando...</p>
+      <div id="answers" class="grid gap-3 mb-4"></div>
+      <button id="next-btn"
+              class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 rounded hidden">
+        Próxima
+      </button>
+      <p id="feedback" class="mt-3 text-center font-semibold"></p>
+    </div>
+    <div class="mt-6">
+      <div class="flex justify-between text-sm mb-1">
+        <span>Pontuação: <span id="score">0</span></span>
+        <span>Concluído: <span id="percent">0</span>%</span>
+      </div>
+      <div class="w-full bg-gray-200 rounded-full h-3">
+        <div id="progress-bar" class="bg-green-500 h-3 rounded-full" style="width: 0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Dados do quiz ---
+    const questions = [
+  {
+    "pergunta": "Quem era Hunefer?",
+    "respostas": ["Um deus egípcio", "Um faraó", "Um escriba real", "Um sacerdote"],
+    "correta": "Um escriba real"
+  },
+  {
+    "pergunta": "Qual deus conduzia Hunefer até a sala do julgamento?",
+    "respostas": ["Osíris", "Thot", "Anúbis", "Hórus"],
+    "correta": "Anúbis"
+  },
+  {
+    "pergunta": "O que representava a pena da deusa Maát?",
+    "respostas": ["Riqueza", "Justiça e verdade", "Força física", "Coragem"],
+    "correta": "Justiça e verdade"
+  },
+  {
+    "pergunta": "O que era pesado na balança durante o julgamento?",
+    "respostas": ["O cérebro", "O coração", "Um livro sagrado", "Um amuleto"],
+    "correta": "O coração"
+  },
+  {
+    "pergunta": "Quem registrava o resultado do julgamento?",
+    "respostas": ["Hórus", "Thot", "Anúbis", "Maát"],
+    "correta": "Thot"
+  },
+  {
+    "pergunta": "O que acontecia se o coração fosse mais pesado que a pena?",
+    "respostas": ["A pessoa era premiada", "Era transformada em deus", "Era comida por um monstro", "Virava faraó"],
+    "correta": "Era comida por um monstro"
+  },
+  {
+    "pergunta": "Qual o nome do monstro que devorava os corações impuros?",
+    "respostas": ["Seth", "Ra", "Ammit", "Sobek"],
+    "correta": "Ammit"
+  },
+  {
+    "pergunta": "Quem apresentava Hunefer a Osíris após o julgamento?",
+    "respostas": ["Thot", "Anúbis", "Hórus", "Maát"],
+    "correta": "Hórus"
+  },
+  {
+    "pergunta": "Quem era o deus dos mortos, sentado no trono?",
+    "respostas": ["Anúbis", "Ra", "Osíris", "Toth"],
+    "correta": "Osíris"
+  },
+  {
+    "pergunta": "Por que os faraós podiam governar, segundo os egípcios?",
+    "respostas": ["Porque eram eleitos pelo povo", "Porque eram ricos", "Porque eram herdeiros de Osíris", "Porque venceram guerras"],
+    "correta": "Porque eram herdeiros de Osíris"
+  }
+]
+
+
+
+
+
+;
+
+    const total = questions.length;
+    let remaining = [...questions];
+    let score = 0;
+    let currentIdx = null;
+
+    // --- Elementos DOM ---
+    const qText     = document.getElementById('question-text');
+    const answers   = document.getElementById('answers');
+    const nextBtn   = document.getElementById('next-btn');
+    const feedback  = document.getElementById('feedback');
+    const scoreEl   = document.getElementById('score');
+    const pctEl     = document.getElementById('percent');
+    const bar       = document.getElementById('progress-bar');
+
+    // Atualiza placar e barra
+    function updateStatus() {
+      scoreEl.textContent = score;
+      const pct = Math.round((score / total) * 100);
+      pctEl.textContent = pct;
+      bar.style.width = pct + '%';
+    }
+
+    // Toca um bip com Web Audio API
+    function playSound(type) {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = type === 'correct' ? 440 : 220;
+      osc.connect(ctx.destination);
+      osc.start();
+      setTimeout(() => { osc.stop(); ctx.close(); },
+                 type === 'correct' ? 150 : 400);
+    }
+
+    // Escolhe e renderiza a próxima pergunta
+    function pickQuestion() {
+      feedback.textContent = '';
+      nextBtn.classList.add('hidden');
+      answers.innerHTML = '';
+
+      if (remaining.length === 0) {
+        qText.textContent = '🎉 Parabéns! Você concluiu todas as perguntas.';
+        return;
+      }
+
+      // sorteio aleatório
+      currentIdx = Math.floor(Math.random() * remaining.length);
+      const q = remaining[currentIdx];
+      qText.textContent = q.pergunta;
+
+      // monta botões de resposta
+      q.respostas.forEach(resp => {
+        const btn = document.createElement('button');
+        btn.className = 'w-full text-left px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded';
+        btn.textContent = resp;
+        btn.onclick = () => handleAnswer(resp);
+        answers.appendChild(btn);
+      });
+    }
+
+    // Lógica ao clicar numa resposta
+    function handleAnswer(selected) {
+      // desabilita todas as opções
+      Array.from(answers.children).forEach(b => b.disabled = true);
+
+      const q = remaining[currentIdx];
+      const correta = q.correta;
+
+      if (selected === correta) {
+        // ACERTOU
+        score++;
+        updateStatus();
+        playSound('correct');
+        feedback.className = 'mt-3 text-green-600 font-semibold';
+        feedback.textContent = '✅ Correto!';
+
+        // remove definitivamente
+        remaining.splice(currentIdx, 1);
+
+        // segue automaticamente em 2s
+        setTimeout(pickQuestion, 2000);
+
+      } else {
+        // ERROU
+        playSound('error');
+        feedback.className = 'mt-3 text-red-600 font-semibold';
+        feedback.textContent = `❌ Errado! A resposta certa é: "${correta}".`;
+
+        // mostra botão Próxima
+        nextBtn.textContent = 'Próxima';
+        nextBtn.classList.remove('hidden');
+        nextBtn.onclick = () => {
+          pickQuestion();
+        };
+      }
+    }
+
+    // Inicialização
+    updateStatus();
+    pickQuestion();
+  </script>
+</body>
+</html>

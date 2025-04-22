@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Quiz de Religião no Antigo Egito</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+  <div class="w-full max-w-md bg-white rounded-xl shadow-lg p-6">
+    <h1 class="text-2xl font-bold text-center mb-4">Quiz de Religião no Antigo Egito</h1>
+    <div id="quiz-container">
+      <p id="question-text" class="text-lg font-medium mb-4">Carregando...</p>
+      <div id="answers" class="grid gap-3 mb-4"></div>
+      <button id="next-btn"
+              class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 rounded hidden">
+        Próxima
+      </button>
+      <p id="feedback" class="mt-3 text-center font-semibold"></p>
+    </div>
+    <div class="mt-6">
+      <div class="flex justify-between text-sm mb-1">
+        <span>Pontuação: <span id="score">0</span></span>
+        <span>Concluído: <span id="percent">0</span>%</span>
+      </div>
+      <div class="w-full bg-gray-200 rounded-full h-3">
+        <div id="progress-bar" class="bg-green-500 h-3 rounded-full" style="width: 0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Dados do quiz ---
+    const questions = [
+  {
+    "pergunta": "O que os egípcios antigos acreditavam que existia depois da morte?",
+    "respostas": ["Um descanso eterno sem necessidades", "Reencarnação em outro corpo", "Vida após a morte", "Esquecimento total da pessoa"],
+    "correta": "Vida após a morte"
+  },
+  {
+    "pergunta": "O que significa ser politeísta?",
+    "respostas": ["Acreditar em um só deus", "Acreditar em vários deuses", "Não acreditar em nenhum deus", "Acreditar na natureza como única força"],
+    "correta": "Acreditar em vários deuses"
+  },
+  {
+    "pergunta": "Por que os egípcios faziam a mumificação?",
+    "respostas": ["Para assustar os inimigos", "Para guardar os corpos como relíquias", "Para conservar os corpos para a vida após a morte", "Porque gostavam de múmias"],
+    "correta": "Para conservar os corpos para a vida após a morte"
+  },
+  {
+    "pergunta": "O que era colocado nos túmulos egípcios?",
+    "respostas": ["Somente o corpo do morto", "Armas e ferramentas de guerra", "Objetos que a pessoa usava em vida", "Somente joias e ouro"],
+    "correta": "Objetos que a pessoa usava em vida"
+  },
+  {
+    "pergunta": "Quem mandava construir as pirâmides?",
+    "respostas": ["Os camponeses", "Os deuses", "Os faraós", "Os sacerdotes"],
+    "correta": "Os faraós"
+  },
+  {
+    "pergunta": "O que era o Vale dos Reis?",
+    "respostas": ["Um templo para adoração", "Um deserto onde ocorriam batalhas", "Um lugar com túmulos de faraós", "Uma cidade comercial"],
+    "correta": "Um lugar com túmulos de faraós"
+  },
+  {
+    "pergunta": "Qual o nome do túmulo feito para os altos funcionários?",
+    "respostas": ["Pirâmide", "Hipogeu", "Mastaba", "Templo"],
+    "correta": "Mastaba"
+  },
+  {
+    "pergunta": "Os túmulos também eram considerados:",
+    "respostas": ["Locais de punição", "Esconderijos secretos", "Moradias para os mortos", "Escolas para crianças"],
+    "correta": "Moradias para os mortos"
+  },
+  {
+    "pergunta": "Os mortos, segundo os egípcios, precisavam de:",
+    "respostas": ["Coisas diferentes dos vivos", "Nada após a morte", "As mesmas coisas que os vivos", "Somente comida"],
+    "correta": "As mesmas coisas que os vivos"
+  },
+  {
+    "pergunta": "Qual das opções representa uma construção típica como túmulo dos faraós?",
+    "respostas": ["Zigurate", "Castelo", "Pirâmide", "Templo flutuante"],
+    "correta": "Pirâmide"
+  }
+]
+
+
+
+
+;
+
+    const total = questions.length;
+    let remaining = [...questions];
+    let score = 0;
+    let currentIdx = null;
+
+    // --- Elementos DOM ---
+    const qText     = document.getElementById('question-text');
+    const answers   = document.getElementById('answers');
+    const nextBtn   = document.getElementById('next-btn');
+    const feedback  = document.getElementById('feedback');
+    const scoreEl   = document.getElementById('score');
+    const pctEl     = document.getElementById('percent');
+    const bar       = document.getElementById('progress-bar');
+
+    // Atualiza placar e barra
+    function updateStatus() {
+      scoreEl.textContent = score;
+      const pct = Math.round((score / total) * 100);
+      pctEl.textContent = pct;
+      bar.style.width = pct + '%';
+    }
+
+    // Toca um bip com Web Audio API
+    function playSound(type) {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = type === 'correct' ? 440 : 220;
+      osc.connect(ctx.destination);
+      osc.start();
+      setTimeout(() => { osc.stop(); ctx.close(); },
+                 type === 'correct' ? 150 : 400);
+    }
+
+    // Escolhe e renderiza a próxima pergunta
+    function pickQuestion() {
+      feedback.textContent = '';
+      nextBtn.classList.add('hidden');
+      answers.innerHTML = '';
+
+      if (remaining.length === 0) {
+        qText.textContent = '🎉 Parabéns! Você concluiu todas as perguntas.';
+        return;
+      }
+
+      // sorteio aleatório
+      currentIdx = Math.floor(Math.random() * remaining.length);
+      const q = remaining[currentIdx];
+      qText.textContent = q.pergunta;
+
+      // monta botões de resposta
+      q.respostas.forEach(resp => {
+        const btn = document.createElement('button');
+        btn.className = 'w-full text-left px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded';
+        btn.textContent = resp;
+        btn.onclick = () => handleAnswer(resp);
+        answers.appendChild(btn);
+      });
+    }
+
+    // Lógica ao clicar numa resposta
+    function handleAnswer(selected) {
+      // desabilita todas as opções
+      Array.from(answers.children).forEach(b => b.disabled = true);
+
+      const q = remaining[currentIdx];
+      const correta = q.correta;
+
+      if (selected === correta) {
+        // ACERTOU
+        score++;
+        updateStatus();
+        playSound('correct');
+        feedback.className = 'mt-3 text-green-600 font-semibold';
+        feedback.textContent = '✅ Correto!';
+
+        // remove definitivamente
+        remaining.splice(currentIdx, 1);
+
+        // segue automaticamente em 2s
+        setTimeout(pickQuestion, 2000);
+
+      } else {
+        // ERROU
+        playSound('error');
+        feedback.className = 'mt-3 text-red-600 font-semibold';
+        feedback.textContent = `❌ Errado! A resposta certa é: "${correta}".`;
+
+        // mostra botão Próxima
+        nextBtn.textContent = 'Próxima';
+        nextBtn.classList.remove('hidden');
+        nextBtn.onclick = () => {
+          pickQuestion();
+        };
+      }
+    }
+
+    // Inicialização
+    updateStatus();
+    pickQuestion();
+  </script>
+</body>
+</html>
